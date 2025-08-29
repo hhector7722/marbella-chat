@@ -28,12 +28,9 @@
 </head>
 <body>
   <script>
-    // Configuración de URLs
-    // Se ha configurado explícitamente la URL del webhook con tu dominio de ngrok.
-    // Si cambias de túnel o de ruta, actualiza estas constantes.
-    const WEBHOOK_URL  = "https://025b682feb3b.ngrok-free.app/webhook-test/webhook/10fb66cc-81b6-420e-ab22-d238a873ba9b/chat";
-    const FALLBACK_URL = "http://localhost:5678/webhook-test/webhook/10fb66cc-81b6-420e-ab22-d238a873ba9b/chat";
-    // Campos posibles en la respuesta que contienen la réplica del agente
+    // Configuración de URLs (producción, no test)
+    const WEBHOOK_URL  = "https://025b682feb3b.ngrok-free.app/webhook/10fb66cc-81b6-420e-ab22-d238a873ba9b/chat";
+    const FALLBACK_URL = "http://localhost:5678/webhook/10fb66cc-81b6-420e-ab22-d238a873ba9b/chat";
     const RESPONSE_FIELDS = ["reply","message","text","data"];
   </script>
 
@@ -52,12 +49,10 @@
   </div>
 
   <script>
-    // Accesos rápidos al DOM
     const $ = s => document.querySelector(s);
     const messages = $("#messages"), input = $("#userInput"), sendBtn = $("#sendBtn");
     const STORAGE_KEY = "marbella_chat_history_v2";
 
-    // Crea y añade un mensaje al historial visual y persiste en localStorage
     function appendMessage(text, role="bot"){
       const div = document.createElement("div");
       div.className = "msg " + role;
@@ -67,7 +62,6 @@
       persistHistory();
     }
 
-    // Añade un indicador de "escribiendo" (tres puntos)
     function appendTyping(){
       const div = document.createElement("div");
       div.className = "msg bot";
@@ -78,9 +72,7 @@
     }
     function removeTyping(){ const el = document.getElementById("typing"); if(el) el.remove(); }
 
-    // Recupera el historial de mensajes del almacenamiento local
     function getHistory(){ try{ return JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]"); }catch(_){ return []; } }
-    // Persiste el historial actual de mensajes en el almacenamiento local
     function persistHistory(){
       const data = Array.from(messages.querySelectorAll(".msg")).map(n=>({
         role: n.classList.contains("user") ? "user" : (n.classList.contains("system") ? "system":"bot"),
@@ -88,14 +80,12 @@
       }));
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     }
-    // Restaura el historial al cargar la página; si no hay, muestra saludo
     (function restore(){
       const hist = getHistory();
       if(hist.length===0){ appendMessage("¡Hola! Soy el asistente de Bar la Mar Bella. ¿En qué te ayudo hoy?"); return; }
       hist.forEach(m=>appendMessage(m.text, m.role));
     })();
 
-    // Envía un POST como x-www-form-urlencoded (evita preflight CORS)
     async function post(url, text){
       const body = "text=" + encodeURIComponent(text);
       return fetch(url, {
@@ -105,24 +95,20 @@
       });
     }
 
-    // Función principal para enviar un mensaje y gestionar la respuesta
     async function sendMessage(){
       const text = input.value.trim();
       if(!text) return;
-      // Muestra el mensaje del usuario
       appendMessage(text, "user");
       input.value = ""; input.style.height = "auto"; sendBtn.disabled = true; appendTyping();
 
       let res, data, ok=false, error=null;
       try{
-        // Primero intenta llamar al webhook en el origen actual (ngrok)
         res = await post(WEBHOOK_URL, text);
         if(!res.ok) throw new Error("HTTP " + res.status);
         try{ data = await res.json(); } catch(_){ data = { raw: await res.text() }; }
         ok = true;
       }catch(e1){
         try{
-          // Si falla, usa fallback en localhost
           res = await post(FALLBACK_URL, text);
           if(!res.ok) throw new Error("HTTP " + res.status);
           try{ data = await res.json(); } catch(_){ data = { raw: await res.text() }; }
@@ -148,9 +134,7 @@
       }
     }
 
-    // Ajusta la altura del textarea dinámicamente
     input.addEventListener("input", () => { input.style.height = "auto"; input.style.height = Math.min(input.scrollHeight, 120) + "px"; });
-    // Intercepta Enter para enviar mensaje (Shift+Enter hace salto de línea)
     input.addEventListener("keydown", (e) => { if(e.key === "Enter" && !e.shiftKey){ e.preventDefault(); sendMessage(); } });
     sendBtn.addEventListener("click", sendMessage);
   </script>
